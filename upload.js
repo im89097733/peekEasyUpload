@@ -54,45 +54,47 @@ getDbItems()
 		return getDirs();
 	})
 	.then(function(isEmpty){
-		var promArr = [];
-		if (isEmpty){
-			dirArr.forEach(function(dir){
-				//push promise and pass zipFile the promise callback
-				promArr.push(new Promise(function(resolve, reject){
-					cloneRepo(dir, function(){
-						zipFiles(dir, function(stream){
-							setS3(dir, stream, resolve, reject);
-						});
-					});
-				})
-			);
-			});
-		}
-		else {
-			dirArr.forEach(function(dir){
-				promArr.push(new Promise(function(resolve, reject){
-					simpleGit = require('simple-git')(__dirname + '/repos/' + dir);
-					//go through folders in repo folder
-					simpleGit.checkout('test')
-							 .pull(repoPaths[dir], 'test', function(err, update){
-							if (err) return reject(err);
-							console.log('repos pulled');
+		return new Promise(function(res, rej){
+			var promArr = [];
+			if (isEmpty){
+				dirArr.forEach(function(dir){
+					//push promise and pass zipFile the promise callback
+					promArr.push(new Promise(function(resolve, reject){
+						cloneRepo(dir, function(){
 							zipFiles(dir, function(stream){
-								//call s3 function and pass in promise args to resolve in callback
 								setS3(dir, stream, resolve, reject);
 							});
 						});
-				}));
-				//reset the git module to look at this file path
-			});
-		}
-		return Promise.all(promArr);
+					})
+				);
+				});
+			}
+			else {
+				dirArr.forEach(function(dir){
+					promArr.push(new Promise(function(resolve, reject){
+						simpleGit = require('simple-git')(__dirname + '/repos/' + dir);
+						//go through folders in repo folder
+						simpleGit.checkout('test')
+								 .pull(repoPaths[dir], 'test', function(err, update){
+								if (err) return reject(err);
+								console.log('repos pulled');
+								zipFiles(dir, function(stream){
+									//call s3 function and pass in promise args to resolve in callback
+									setS3(dir, stream, resolve, reject);
+								});
+							});
+					}));
+					//reset the git module to look at this file path
+				});
+			}
+			return Promise.all(promArr).then(res);
+		})
 	})
 	.then(function(){
 		console.log('uploaded!');
 	})
 	.catch(function(err){
-		console.log(err);
+		throw err;
 	});
 
 
@@ -226,7 +228,7 @@ function cloneRepo(dir, cb){
 function pullRepo(dir, cb){
 	simpleGit.checkout('test')
 		.pull(repoPaths[dir], 'test', function(err, update){
-			if (err) console.log(err);
+			if (err) throw err;
 			
 			//zip up contents of folder
 			zipFiles(dir);
