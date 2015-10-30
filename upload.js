@@ -9,6 +9,10 @@ var fs = require('fs');
 var archiver = require('archiver');
 var dynamodb = new AWS.DynamoDB();
 var s3 = new AWS.S3({region: undefined});
+
+//local requires
+var utl = require('./modules/utl.js');
+
 //not being used right now, might be useful in future
 //to keep reference of current directory
 var currentDir;
@@ -54,7 +58,7 @@ getDbItems()
 		return getDirs();
 	})
 	.then(function(isEmpty){
-		return new Promise(function(res, rej){
+		return new Promise(function(resCb, rejCb){
 			var promArr = [];
 			if (isEmpty){
 				dirArr.forEach(function(dir){
@@ -87,11 +91,11 @@ getDbItems()
 					//reset the git module to look at this file path
 				});
 			}
-			return Promise.all(promArr).then(res);
-		})
+			return Promise.all(promArr).then(resCb);
+		});
 	})
 	.then(function(){
-		console.log('uploaded!');
+		console.log('program completed');
 	})
 	.catch(function(err){
 		throw err;
@@ -102,7 +106,7 @@ getDbItems()
 function setS3(dir, stream, cbResolve, cbReject){
 	console.log('s3 init');
 	
-	var s3Opts = getS3FolderName(dir);
+	var s3Opts = getVegetS3FolderName(dir);
 
 	//pass read stream in to params object to push to s3
 	var s3Params = {
@@ -113,6 +117,7 @@ function setS3(dir, stream, cbResolve, cbReject){
 
 	s3.putObject(s3Params, function(err, data){
 		if (err) cbReject(err);
+		console.log('uploaded!');
 		return cbResolve();
 	});
 }
@@ -137,13 +142,13 @@ function getDbItems(){
 			data.Responses.Version.forEach(function(item){
 				var newVerMap = item.ver;
 
-				newVerMap.M[verMapSelect].N++;
+				newVerMap.M[verMapSelect].N = increaseDbNum(newVerMap.M[verMapSelect].N);
 		
 				getS3FolderName(item.label.S.toLowerCase(), {
 					label: item.label.S.toLowerCase(),
 					//TODO need to switch nodeTest to be more dynamic
 					//for choosing version number
-					bucketData: getVerFolderName(newVerMap.M[verMapSelect].N)
+					bucketData: utl.getVerFolderName(newVerMap.M[verMapSelect].N)
 				});
 				
 
@@ -185,10 +190,6 @@ function getDbItems(){
 	//array to hold expression update objects
 }
 
-//need to convert number to version folder name
-function getVerFolderName(num){
-  return 'ver ' + [num.toString().slice(0, -1), '.', num.toString().slice(-1)].join().replace(/,/g,'');
-}
 
 function getDirs(){
 	//set promise to save myself from callback hell
