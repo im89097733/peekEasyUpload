@@ -106,7 +106,7 @@ getDbItems()
 function setS3(dir, stream, cbResolve, cbReject){
 	console.log('s3 init');
 	
-	var s3Opts = getVegetS3FolderName(dir);
+	var s3Opts = getS3FolderName(dir);
 
 	//pass read stream in to params object to push to s3
 	var s3Params = {
@@ -142,7 +142,7 @@ function getDbItems(){
 			data.Responses.Version.forEach(function(item){
 				var newVerMap = item.ver;
 
-				newVerMap.M[verMapSelect].N = increaseDbNum(newVerMap.M[verMapSelect].N);
+				newVerMap.M[verMapSelect].N = utl.increaseDbNum(newVerMap.M[verMapSelect].N);
 		
 				getS3FolderName(item.label.S.toLowerCase(), {
 					label: item.label.S.toLowerCase(),
