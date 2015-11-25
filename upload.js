@@ -20,7 +20,7 @@ var currentDir;
 var repoPaths = {
 	meta: 'https://github.com/im89097733/ContentMeta.git',
 	base: 'https://github.com/im89097733/ROOT.git'
-}
+};
 
 var params = {
 	"RequestItems": {
@@ -33,7 +33,8 @@ var params = {
 	}
 };
 //Change this variable to specify version in dynamo (bootstrap, test, etc);
-var verMapSelect = 'bootstrap';
+var verMapSelect = 'bootstrap_test';
+var branchName = "test";
 
 //use this object to determine write information for different paths and repos
 //will add in version name and label after database query
@@ -56,17 +57,19 @@ var verRefArr = [];
 getDbItems()
 	.then(function(){
 		return getDirs();
+	}, function(err){
+		throw err;
 	})
 	.then(function(isEmpty){
 		return new Promise(function(resCb, rejCb){
 			var promArr = [];
 			if (isEmpty){
-				dirArr.forEach(function(dir){
+				dirArr.forEach(function(obj){
 					//push promise and pass zipFile the promise callback
 					promArr.push(new Promise(function(resolve, reject){
-						cloneRepo(dir, function(){
-							zipFiles(dir, function(stream){
-								setS3(dir, stream, resolve, reject);
+						cloneRepo(obj, function(){
+							zipFiles(obj, function(stream){
+								setS3(obj.name, stream, resolve, reject);
 							});
 						});
 					})
@@ -74,34 +77,34 @@ getDbItems()
 				});
 			}
 			else {
-				dirArr.forEach(function(dir){
+				dirArr.forEach(function(obj){
 					promArr.push(new Promise(function(resolve, reject){
-						simpleGit = require('simple-git')(__dirname + '/repos/' + dir);
 						//go through folders in repo folder
-						simpleGit.checkout('test')
-								 .pull(repoPaths[dir], 'test', function(err, update){
+						require('simple-git')(obj.dir).checkout(branchName)
+								 .pull(repoPaths[obj.name], branchName, function(err, update){
 								if (err) return reject(err);
-								console.log('repos pulled');
-								zipFiles(dir, function(stream){
+								console.log('repo ' + obj.name + ' pulled');
+								zipFiles(obj, function(stream){
 									//call s3 function and pass in promise args to resolve in callback
-									setS3(dir, stream, resolve, reject);
+									setS3(obj.name, stream, resolve, reject);
 								});
 							});
 					}));
 					//reset the git module to look at this file path
 				});
 			}
-			return Promise.all(promArr).then(resCb);
+			return Promise.all(promArr).then(function(){
+				return resCb();
+			}).catch(function(err){
+				throw err;
+			});
 		});
 	})
 	.then(function(){
 		console.log('program completed');
-	})
-	.catch(function(err){
+	}, function(err){
 		throw err;
 	});
-
-
 //push files to s3
 function setS3(dir, stream, cbResolve, cbReject){
 	console.log('s3 init');
@@ -184,7 +187,9 @@ function getDbItems(){
 					});
 				}));
 			});
-			return Promise.all(promArr).then(res);
+			return Promise.all(promArr).then(function(){
+				return res();
+			});
 		});
 	})
 	//array to hold expression update objects
@@ -194,17 +199,26 @@ function getDbItems(){
 function getDirs(){
 	//set promise to save myself from callback hell
 	return new Promise(function(resolve, reject){
-		fs.readdir('./repos', function(err, files){
+		fs.readdir(__dirname + '/repos', function(err, files){
 			if (err) return reject(err);
 			if (!files.length || files.length === 1 && files[0] === '.DS_Store'){
-				dirArr = ['base', 'meta'];
+				dirArr = [{
+					dir: __dirname + '/repos/base',
+					name: 'base'
+				}, {
+					dir: __dirname + '/repos/meta',
+					name: 'meta'
+				}];
 				return resolve(true);
 			}
 			else {
 				files.forEach(function(dir){
-					if (dir !== '.DS_Store'){
+					if (dir !== '.DS_Store' && dir !== '.gitignore'){
 						currentDir = __dirname + '/repos/' + dir;
-						dirArr.push(dir);
+						dirArr.push({
+							dir: currentDir,
+							name: dir
+						});
 					}
 				});
 				return resolve(false);
@@ -218,9 +232,8 @@ function getDirs(){
 
 //choose which repo to clone
 function cloneRepo(dir, cb){
-	currentDir = __dirname + '/repos/' + dir;
-		simpleGit.clone(repoPaths[dir], './repos/' + dir, function(){
-			require('simple-git')(__dirname + '/repos/' + dir)
+		simpleGit.clone(repoPaths[dir.name], dir.dir, function(){
+			require('simple-git')(dir.dir)
 				.checkout('test', cb);
 		});
 }
@@ -239,23 +252,25 @@ function pullRepo(dir, cb){
 //zip up files after git merge
 function zipFiles(dir, cb){
 		var readStream;
-		var writeStream = fs.createWriteStream(dir + '.zip');
+		//TODO
+		//bug where zip archiver is putting files in the repos folder instead of the base
+		var writeStream = fs.createWriteStream(__dirname + '/' + dir.name + '.zip');
 		var zipArchive = archiver('zip');
 
 		writeStream.on('close', function() {
 		   console.log('stream ended');
 		   //make read stream after the zip has been written
-		   readStream = fs.createReadStream(dir + '.zip');
+		   readStream = fs.createReadStream(__dirname + '/' + dir.name + '.zip');
 		   //pass to the s3 function
 		   cb(readStream);
 		});
 
 		zipArchive.pipe(writeStream);
 
-		zipArchive.directory('./repos/' + dir, dir);
+		zipArchive.directory(dir.dir, dir.name);
 
 		zipArchive.on('error', function(err){
-			return cbReject(err);
+			throw err;
 		});
 
 		zipArchive.finalize();
