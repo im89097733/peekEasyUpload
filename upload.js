@@ -267,7 +267,11 @@ function zipFiles(dir, cb){
 
 		zipArchive.pipe(writeStream);
 
-		zipArchive.directory(dir.dir, dir.name);
+		//zipArchive.directory(dir.dir, dir.name);
+
+		zipArchive.bulk([
+			{src: ['**/*', '!.git/**.*'], cwd: dir.dir, expand: true, dest: dir.name}
+		])
 
 		zipArchive.on('error', function(err){
 			throw err;
