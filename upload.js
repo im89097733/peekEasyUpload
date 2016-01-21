@@ -44,10 +44,10 @@ var folderName = {
 
 //put in directories that need to be pushed
 var dirArr = [{
-		dir: 'CHANGE THIS',
+		dir: '/usr/local/apache-tomcat-8.0.20/webapps/ROOT',
 		name: 'base'
 	}, {
-		dir: 'CHANGE THIS',
+		dir: '/usr/local/peekaplatform/ContentMeta',
 		name: 'meta'
 	}];
 //variable to hold references to new version numbers for s3
@@ -195,10 +195,10 @@ function zipFiles(dir, cb){
 
 		function getFileArr(){
 			if (dir.name === 'meta'){
-				return ['**/*', '!.DS_Store', '!.git/**.*', '!.gitignore']
+				return ['**/*', '!**/.DS_Store', '!.git/**.*', '!.gitignore']
 			}
 			else if (dir.name === 'base'){
-				return ['404.html', 'content/*.html', 'CSS/*.css', 'fragments/*.html', 'scripts/*.js', 'WEB-INF/**.*', 'index.html']
+				return ['404.html', 'content/*.html', 'CSS/*.css', 'fragments/*.html', 'scripts/*.js', 'WEB-INF/**/*.*', 'index.html']
 			}
 		}
 }
