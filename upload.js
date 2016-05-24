@@ -1,7 +1,9 @@
 var AWS = new require('aws-sdk');
 //set region prior to loading of client objects
-AWS.config.update({region: 'us-west-2'});
-
+var credentials = new AWS.SharedIniFileCredentials({profile: 'platformDynamoDB'});
+AWS.config.credentials = credentials;
+AWS.config.region = 'us-west-2';  //us-west-2 is Oregon
+AWS.config.update({profile:'platformDynamoDB'});
 var _ = require('lodash');
 //refill this in later based on local dir
 var fs = require('fs');
@@ -15,7 +17,14 @@ var utl = require('./modules/utl.js');
 //not being used right now, might be useful in future
 //to keep reference of current directory
 var currentDir;
+var args = {search: "BOOK_OPEN", since:'0', before:'9458590180354'};
+function processArg(arg)
+{
+	var parts = arg.split("=");
+	args[parts[0]]=parts[1];
+}
 
+process.argv.forEach(processArg);
 var params = {
 	"RequestItems": {
 	    "Version": {
@@ -27,7 +36,20 @@ var params = {
 	}
 };
 //Change this variable to specify version in dynamo (bootstrap, test, etc);
-var verMapSelect = 'bootstrap_test';
+var verMapSelect = determineTarget();
+function determineTarget()
+{
+	switch(args.target)
+	{
+		case "staging":
+			verMapSelect = 'bootstrap';
+			break;
+		case "test:":
+
+		default:
+			verMapSelect = 'bootstrap_test';
+	}
+}
 
 //use this object to determine write information for different paths and repos
 //will add in version name and label after database query
@@ -44,10 +66,10 @@ var folderName = {
 
 //put in directories that need to be pushed
 var dirArr = [{
-		dir: '/usr/local/apache-tomcat-8.0.20/webapps/ROOT',
+		dir: '/users/mark/git/wc',
 		name: 'base'
 	}, {
-		dir: '/usr/local/peekaplatform/ContentMeta',
+		dir: '/peekaplatform/Meta',
 		name: 'meta'
 	}];
 //variable to hold references to new version numbers for s3
