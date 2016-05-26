@@ -42,12 +42,12 @@ function determineTarget()
 	switch(args.target)
 	{
 		case "staging":
-			verMapSelect = 'bootstrap';
+			return 'bootstrap';
 			break;
-		case "test:":
+		case "test":
 
 		default:
-			verMapSelect = 'bootstrap_test';
+			return 'bootstrap_test';
 	}
 }
 
