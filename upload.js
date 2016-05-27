@@ -65,13 +65,42 @@ var folderName = {
 };
 
 //put in directories that need to be pushed
-var dirArr = [{
-		dir: '/users/mark/git/wc',
-		name: 'base'
-	}, {
-		dir: '/peekaplatform/Meta',
-		name: 'meta'
-	}];
+var dirArr = setDirsFromArgs();
+function setDirsFromArgs()
+{
+	dirArr  = [];
+	params.RequestItems.Version.Keys = [];
+
+	// could add other props for CONF etc. too
+	if (args.base)
+	{
+		dirArr.push(
+
+		{
+		//	dir: '/users/mark/git/wc',
+			dir: args.base,
+			name: 'base'
+		});
+		params.RequestItems.Version.Keys.push({"label": {"S":"BASE"}});
+
+
+	}
+	if(args.meta)
+	{
+		dirArr.push(
+
+			{
+				//
+				//dir: '/peekaplatform/Meta',
+				dir: args.meta,
+				name: 'meta'
+			});
+
+		params.RequestItems.Version.Keys.push({"label": {"S":"Meta"}});
+
+	}
+	return dirArr;
+}
 //variable to hold references to new version numbers for s3
 var verRefArr = [];
 
