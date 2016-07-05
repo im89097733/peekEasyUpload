@@ -82,8 +82,6 @@ function setDirsFromArgs()
 			name: 'base'
 		});
 		params.RequestItems.Version.Keys.push({"label": {"S":"BASE"}});
-
-
 	}
 	if(args.meta)
 	{
@@ -136,13 +134,16 @@ function setS3(dir, stream, cbResolve, cbReject){
 
 	//pass read stream in to params object to push to s3
 	var s3Params = {
-		Bucket: 'peekaplatform/' + s3Opts.s3Bucket + '/' + s3Opts.bucketData,
-		Key: s3Opts.writeName,
+		Bucket: 'peekaplatform',
+		Key: s3Opts.s3Bucket + '/' + s3Opts.bucketData + '/' + s3Opts.writeName,
 		Body: stream
 	}
 
+	//s3Params.Body.path = 'C:\\peekEasyUpload\\base.zip';
+
 	s3.putObject(s3Params, function(err, data){
 		if (err) cbReject(err);
+		console.log(err);
 		console.log('uploaded!');
 		return cbResolve();
 	});
@@ -222,12 +223,13 @@ function zipFiles(dir, cb){
 		//TODO
 		//bug where zip archiver is putting files in the repos folder instead of the base
 		var writeStream = fs.createWriteStream(__dirname + '/' + dir.name + '.zip');
+		console.log(__dirname + '/' + dir.name + '.zip')
 		var zipArchive = archiver('zip');
 
 		writeStream.on('close', function() {
 		   console.log('stream ended');
 		   //make read stream after the zip has been written
-		   readStream = fs.createReadStream(__dirname + '/' + dir.name + '.zip');
+		   readStream = fs.createReadStream(__dirname + '\\' + dir.name + '.zip');
 		   //pass to the s3 function
 		   cb(readStream);
 		});
