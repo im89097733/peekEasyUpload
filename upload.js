@@ -139,11 +139,9 @@ function setS3(dir, stream, cbResolve, cbReject){
 		Body: stream
 	}
 
-	//s3Params.Body.path = 'C:\\peekEasyUpload\\base.zip';
-
 	s3.putObject(s3Params, function(err, data){
 		if (err) cbReject(err);
-		console.log(err);
+		console.log(err?err:'no errors');
 		console.log('uploaded!');
 		return cbResolve();
 	});
@@ -222,14 +220,14 @@ function zipFiles(dir, cb){
 		var readStream;
 		//TODO
 		//bug where zip archiver is putting files in the repos folder instead of the base
-		var writeStream = fs.createWriteStream(__dirname + '/' + dir.name + '.zip');
-		console.log(__dirname + '/' + dir.name + '.zip')
+		var writeStream = fs.createWriteStream('./' + dir.name + '.zip');
+
 		var zipArchive = archiver('zip');
 
 		writeStream.on('close', function() {
 		   console.log('stream ended');
 		   //make read stream after the zip has been written
-		   readStream = fs.createReadStream(__dirname + '\\' + dir.name + '.zip');
+		   readStream = fs.createReadStream('./' + dir.name + '.zip');
 		   //pass to the s3 function
 		   cb(readStream);
 		});
